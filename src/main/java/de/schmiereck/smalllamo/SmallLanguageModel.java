@@ -122,41 +122,41 @@ public class SmallLanguageModel {
 
         for (int epoch = 0; epoch < epochs; epoch++) {
             network.rnnClearPreviousState();
-
-            // Ein 3D-Array für die Eingabe erstellen [miniBatchSize=1, nIn=inputSize, timeSeriesLength]
-            INDArray inputArr = Nd4j.zeros(1, inputSize, timeSeriesLength);
-            INDArray outputArr = Nd4j.zeros(1, outputSize, timeSeriesLength);
+            double sequenceLoss = 0;
 
             for (int charPos = 0; charPos < timeSeriesLength; charPos++) {
                 char currentChar = characters[charPos];
                 char nextChar = characters[charPos + 1];
+
+                // Ein 3D-Array für die Eingabe erstellen [miniBatchSize=1, nIn=inputSize, timeSeriesLength]
+                INDArray inputArr = Nd4j.zeros(1, inputSize, 1);
+                INDArray outputArr = Nd4j.zeros(1, outputSize, 1);
 
                 double[] inputVector = CharEncoder.encode(currentChar);
                 double[] targetVector = CharEncoder.encode(nextChar);
 
                 // Eingabevektoren für diesen Zeitschritt einfügen
                 for (int inputPos = 0; inputPos < inputSize; inputPos++) {
-                    inputArr.putScalar(new int[]{0, inputPos, charPos}, inputVector[inputPos]);
+                    inputArr.putScalar(new int[]{0, inputPos, 0}, inputVector[inputPos]);
                 }
 
                 // Zielvektoren für diesen Zeitschritt einfügen
                 for (int outputPos = 0; outputPos < outputSize; outputPos++) {
-                    outputArr.putScalar(new int[]{0, outputPos, charPos}, targetVector[outputPos]);
+                    outputArr.putScalar(new int[]{0, outputPos, 0}, targetVector[outputPos]);
                 }
-            }
 
-            // Training für die gesamte Sequenz
-            network.fit(inputArr, outputArr);
+                // Training für die gesamte Sequenz
+                network.fit(inputArr, outputArr);
 
-            // Vorhersage für die Sequenz
-            INDArray output = network.output(inputArr);
+                // Vorhersage für die Sequenz
+                INDArray output = network.output(inputArr);
 
-            // Verlust berechnen
-            double sequenceLoss = 0;
-            for (int charPos = 0; charPos < timeSeriesLength; charPos++) {
-                INDArray actualOutput = output.get(NDArrayIndex.point(0), NDArrayIndex.all(), NDArrayIndex.point(charPos));
-                INDArray expectedOutput = outputArr.get(NDArrayIndex.point(0), NDArrayIndex.all(), NDArrayIndex.point(charPos));
-                sequenceLoss += calculateLoss(actualOutput, expectedOutput);
+                // Verlust berechnen
+                //for (int charPos = 0; charPos < timeSeriesLength; charPos++) {
+                    INDArray actualOutput = output.get(NDArrayIndex.point(0), NDArrayIndex.all(), NDArrayIndex.point(0));
+                    INDArray expectedOutput = outputArr.get(NDArrayIndex.point(0), NDArrayIndex.all(), NDArrayIndex.point(0));
+                    sequenceLoss += calculateLoss(actualOutput, expectedOutput);
+                //}
             }
 
             // Durchschnittlicher Verlust über alle Sequenzen

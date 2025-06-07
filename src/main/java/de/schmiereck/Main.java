@@ -26,12 +26,24 @@ public class Main {
         SmallLanguageModel model = new SmallLanguageModel();
 
         {
-            //String[] patterns = { "00." };
-            String[] patterns = { "01" };
-            int epochs = 500;
+            String[] patterns = { "01." };
+            int epochs = 10;
             trainSmallLanguageModel(model, random, patterns, epochs);
             generateText(model);
         }
+        {
+            String[] patterns = { "11." };
+            int epochs = 100;
+            trainSmallLanguageModel(model, random, patterns, epochs);
+            generateText(model);
+        }
+//        {
+//            String[] patterns = { "00." };
+//            //String[] patterns = { "01" };
+//            int epochs = 200;
+//            trainSmallLanguageModel(model, random, patterns, epochs);
+//            generateText(model);
+//        }
 //        {
 //            String[] patterns = { "00.11." };
 //            int epochs = 100;
@@ -79,7 +91,7 @@ public class Main {
     private static SmallLanguageModel trainSmallLanguageModel(SmallLanguageModel model, Random random, String[] patterns, int epochs) {
         // Zufällige Reihenfolge der Muster generieren
         StringBuilder trainingData = new StringBuilder();
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 50; i++) {
             trainingData.append(patterns[random.nextInt(patterns.length)]);
         }
 
