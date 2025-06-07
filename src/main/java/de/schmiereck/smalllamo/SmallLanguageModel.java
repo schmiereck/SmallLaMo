@@ -100,7 +100,7 @@ public class SmallLanguageModel {
         // Netzwerk initialisieren
         network = new MultiLayerNetwork(config);
         network.init();
-        network.setListeners(new ScoreIterationListener(20)); // Log-Ausgaben alle 20 Iterationen
+        network.setListeners(new ScoreIterationListener(1000)); // Log-Ausgaben alle 20 Iterationen
 
         logger.info("Erweitertes neuronales Netzwerk initialisiert mit Architektur: {} -> {} -> {} -> {} -> {} -> {}",
                 inputSize, preLayerSize1, preLayerSize2, lstmLayerSize, postLayer1Size, postLayer2Size, outputSize);
@@ -118,60 +118,49 @@ public class SmallLanguageModel {
         char[] characters = text.toCharArray();
 
         // Länge der Sequenz für BPTT festlegen - z.B. 10 Zeichen
-        int timeSeriesLength = Math.min(10, characters.length - 1);
+        int timeSeriesLength = characters.length - 1; //Math.min(9, characters.length - 1);
 
         for (int epoch = 0; epoch < epochs; epoch++) {
-            double totalLoss = 0.0;
+            network.rnnClearPreviousState();
 
-            // Für jede mögliche Startposition der Sequenz
-            for (int seqStart = 0; seqStart <= characters.length - timeSeriesLength - 1; seqStart++) {
-                network.rnnClearPreviousState();
+            // Ein 3D-Array für die Eingabe erstellen [miniBatchSize=1, nIn=inputSize, timeSeriesLength]
+            INDArray inputArr = Nd4j.zeros(1, inputSize, timeSeriesLength);
+            INDArray outputArr = Nd4j.zeros(1, outputSize, timeSeriesLength);
 
-                // Ein 3D-Array für die Eingabe erstellen [miniBatchSize=1, nIn=inputSize, timeSeriesLength]
-                INDArray input = Nd4j.zeros(1, inputSize, timeSeriesLength);
-                INDArray labels = Nd4j.zeros(1, outputSize, timeSeriesLength);
+            for (int charPos = 0; charPos < timeSeriesLength; charPos++) {
+                char currentChar = characters[charPos];
+                char nextChar = characters[charPos + 1];
 
-                // Die Zeitreihe füllen
-                for (int timeStep = 0; timeStep < timeSeriesLength; timeStep++) {
-                    char currentChar = characters[seqStart + timeStep];
-                    char nextChar = characters[seqStart + timeStep + 1];
+                double[] inputVector = CharEncoder.encode(currentChar);
+                double[] targetVector = CharEncoder.encode(nextChar);
 
-                    double[] inputVector = CharEncoder.encode(currentChar);
-                    double[] targetVector = CharEncoder.encode(nextChar);
-
-                    // Eingabevektoren für diesen Zeitschritt einfügen
-                    for (int i = 0; i < inputSize; i++) {
-                        input.putScalar(new int[]{0, i, timeStep}, inputVector[i]);
-                    }
-
-                    // Zielvektoren für diesen Zeitschritt einfügen
-                    for (int i = 0; i < outputSize; i++) {
-                        labels.putScalar(new int[]{0, i, timeStep}, targetVector[i]);
-                    }
+                // Eingabevektoren für diesen Zeitschritt einfügen
+                for (int inputPos = 0; inputPos < inputSize; inputPos++) {
+                    inputArr.putScalar(new int[]{0, inputPos, charPos}, inputVector[inputPos]);
                 }
 
-                // Training für die gesamte Sequenz
-                network.fit(input, labels);
-
-                // Vorhersage für die Sequenz
-                INDArray output = network.output(input);
-
-                // Verlust berechnen
-                double sequenceLoss = 0;
-                for (int timeStep = 0; timeStep < timeSeriesLength; timeStep++) {
-                    INDArray actualOutput = output.get(NDArrayIndex.point(0), NDArrayIndex.all(), NDArrayIndex.point(timeStep));
-                    INDArray expectedOutput = labels.get(NDArrayIndex.point(0), NDArrayIndex.all(), NDArrayIndex.point(timeStep));
-                    sequenceLoss += calculateLoss(actualOutput, expectedOutput);
+                // Zielvektoren für diesen Zeitschritt einfügen
+                for (int outputPos = 0; outputPos < outputSize; outputPos++) {
+                    outputArr.putScalar(new int[]{0, outputPos, charPos}, targetVector[outputPos]);
                 }
+            }
 
-                totalLoss += sequenceLoss / timeSeriesLength;
+            // Training für die gesamte Sequenz
+            network.fit(inputArr, outputArr);
+
+            // Vorhersage für die Sequenz
+            INDArray output = network.output(inputArr);
+
+            // Verlust berechnen
+            double sequenceLoss = 0;
+            for (int charPos = 0; charPos < timeSeriesLength; charPos++) {
+                INDArray actualOutput = output.get(NDArrayIndex.point(0), NDArrayIndex.all(), NDArrayIndex.point(charPos));
+                INDArray expectedOutput = outputArr.get(NDArrayIndex.point(0), NDArrayIndex.all(), NDArrayIndex.point(charPos));
+                sequenceLoss += calculateLoss(actualOutput, expectedOutput);
             }
 
             // Durchschnittlicher Verlust über alle Sequenzen
-            int numSequences = characters.length - timeSeriesLength;
-            if (numSequences > 0) {
-                logger.info("Epoche {} abgeschlossen, Durchschnittsverlust: {}", epoch, totalLoss / numSequences);
-            }
+            logger.info("Epoche {} abgeschlossen, Durchschnittsverlust: {}", epoch, sequenceLoss / timeSeriesLength);
         }
 
         logger.info("Training abgeschlossen.");
@@ -183,29 +172,6 @@ public class SmallLanguageModel {
     private double calculateLoss(INDArray output, INDArray target) {
         INDArray diff = target.sub(output);
         return diff.mul(diff).sumNumber().doubleValue();
-    }
-
-    /**
-     * Vorhersage des nächsten Zeichens bei gegebener Eingabe.
-     *
-     * @param input Das Eingabezeichen
-     * @return Das vorhergesagte nächste Zeichen
-     */
-    public char predict(char input) {
-        // Eingabezeichen kodieren
-        double[] inputVector = CharEncoder.encode(input);
-        INDArray inputArray = Nd4j.create(inputVector).reshape(1, inputSize, 1);
-
-        // Vorhersage durch das Netzwerk
-        INDArray outputArray = network.output(inputArray);
-
-        // Umwandeln der Ausgabe in ein Zeichen
-        // Da outputArray 3D ist [1, outputSize, 1], müssen wir den Vektor für den ersten Batch und ersten Zeitschritt extrahieren.
-        INDArray outputVectorSlice = outputArray.get(NDArrayIndex.point(0), NDArrayIndex.all(), NDArrayIndex.point(0));
-        double[] outputVector = outputVectorSlice.toDoubleVector();
-        double[] binaryOutput = CharEncoder.argmax(outputVector);
-
-        return CharEncoder.decode(binaryOutput);
     }
 
     /**
@@ -230,6 +196,29 @@ public class SmallLanguageModel {
         }
 
         return result.toString();
+    }
+
+    /**
+     * Vorhersage des nächsten Zeichens bei gegebener Eingabe.
+     *
+     * @param input Das Eingabezeichen
+     * @return Das vorhergesagte nächste Zeichen
+     */
+    public char predict(char input) {
+        // Eingabezeichen kodieren
+        double[] inputVector = CharEncoder.encode(input);
+        INDArray inputArray = Nd4j.create(inputVector).reshape(1, inputSize, 1);
+
+        // Vorhersage durch das Netzwerk
+        INDArray outputArray = network.output(inputArray);
+
+        // Umwandeln der Ausgabe in ein Zeichen
+        // Da outputArray 3D ist [1, outputSize, 1], müssen wir den Vektor für den ersten Batch und ersten Zeitschritt extrahieren.
+        INDArray outputVectorSlice = outputArray.get(NDArrayIndex.point(0), NDArrayIndex.all(), NDArrayIndex.point(0));
+        double[] outputVector = outputVectorSlice.toDoubleVector();
+        double[] binaryOutput = CharEncoder.argmax(outputVector);
+
+        return CharEncoder.decode(binaryOutput);
     }
 
     /**

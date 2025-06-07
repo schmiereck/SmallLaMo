@@ -7,6 +7,12 @@ import java.util.Random;
 // click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
 public class Main {
     public static void main(String[] args) {
+        // Konfigurieren von ND4J für die Nutzung mehrerer CPU-Kerne
+        // Setzen Sie die Anzahl der Threads auf die Anzahl der verfügbaren Prozessoren oder einen gewünschten Wert.
+        // System.setProperty("org.nd4j.linalg.cpu.omp.maxthreads", String.valueOf(Runtime.getRuntime().availableProcessors()));
+        // Alternativ eine feste Anzahl, z.B. 4 Threads:
+        System.setProperty("org.nd4j.linalg.cpu.omp.maxthreads", "8");
+
         System.out.println("Starte SmallLaMo - Small Language Model für Efficient Inference");
 
         // Trainingsdaten erstellen (einfache Sequenz)
@@ -20,17 +26,36 @@ public class Main {
         SmallLanguageModel model = new SmallLanguageModel();
 
         {
-            String[] patterns = { "00.11.22." };
-            int epochs = 50;
+            //String[] patterns = { "00." };
+            String[] patterns = { "01" };
+            int epochs = 500;
             trainSmallLanguageModel(model, random, patterns, epochs);
             generateText(model);
         }
-        {
-            String[] patterns = { "00.", "11.", "22." };
-            int epochs = 50;
-            trainSmallLanguageModel(model, random, patterns, epochs);
-            generateText(model);
-        }
+//        {
+//            String[] patterns = { "00.11." };
+//            int epochs = 100;
+//            trainSmallLanguageModel(model, random, patterns, epochs);
+//            generateText(model);
+//        }
+//        {
+//            String[] patterns = { "00.11.22." };
+//            int epochs = 100;
+//            trainSmallLanguageModel(model, random, patterns, epochs);
+//            generateText(model);
+//        }
+//        {
+//            String[] patterns = { "00.11.22." };
+//            int epochs = 100;
+//            trainSmallLanguageModel(model, random, patterns, epochs);
+//            generateText(model);
+//        }
+//        {
+//            String[] patterns = { "00.", "11.", "22." };
+//            int epochs = 100;
+//            trainSmallLanguageModel(model, random, patterns, epochs);
+//            generateText(model);
+//        }
     }
 
     private static void generateText(SmallLanguageModel model) {
@@ -54,7 +79,7 @@ public class Main {
     private static SmallLanguageModel trainSmallLanguageModel(SmallLanguageModel model, Random random, String[] patterns, int epochs) {
         // Zufällige Reihenfolge der Muster generieren
         StringBuilder trainingData = new StringBuilder();
-        for (int i = 0; i < 30; i++) {
+        for (int i = 0; i < 10; i++) {
             trainingData.append(patterns[random.nextInt(patterns.length)]);
         }
 
