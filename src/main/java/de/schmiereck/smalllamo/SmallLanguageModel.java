@@ -4,6 +4,7 @@ import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.BackpropType;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
+import org.deeplearning4j.nn.conf.inputs.InputType; // Import hinzugefügt
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
 import org.deeplearning4j.nn.conf.layers.LSTM;
 import org.deeplearning4j.nn.conf.layers.RnnOutputLayer;
@@ -85,6 +86,7 @@ public class SmallLanguageModel {
                 .backpropType(BackpropType.TruncatedBPTT)
                 .tBPTTForwardLength(10)
                 .tBPTTBackwardLength(10)
+                .setInputType(InputType.recurrent(inputSize)) // Hinzugefügt für korrekte Eingabebehandlung
                 .build();
 
         // Netzwerk initialisieren
