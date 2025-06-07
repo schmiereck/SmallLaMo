@@ -4,10 +4,11 @@ import org.deeplearning4j.nn.api.OptimizationAlgorithm;
 import org.deeplearning4j.nn.conf.BackpropType;
 import org.deeplearning4j.nn.conf.MultiLayerConfiguration;
 import org.deeplearning4j.nn.conf.NeuralNetConfiguration;
-import org.deeplearning4j.nn.conf.inputs.InputType; // Import hinzugefügt
+import org.deeplearning4j.nn.conf.inputs.InputType;
 import org.deeplearning4j.nn.conf.layers.DenseLayer;
 import org.deeplearning4j.nn.conf.layers.LSTM;
 import org.deeplearning4j.nn.conf.layers.RnnOutputLayer;
+import org.deeplearning4j.nn.conf.preprocessor.RnnToFeedForwardPreProcessor; // Import für manuellen Preprocessor
 import org.deeplearning4j.nn.multilayer.MultiLayerNetwork;
 import org.deeplearning4j.nn.weights.WeightInit;
 import org.deeplearning4j.optimize.listeners.ScoreIterationListener;
@@ -87,6 +88,7 @@ public class SmallLanguageModel {
                 .tBPTTForwardLength(10)
                 .tBPTTBackwardLength(10)
                 .setInputType(InputType.recurrent(inputSize)) // Hinzugefügt für korrekte Eingabebehandlung
+                .inputPreProcessor(0, new RnnToFeedForwardPreProcessor()) // Korrigierte Position für den Preprocessor
                 .build();
 
         // Netzwerk initialisieren

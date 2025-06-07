@@ -15,7 +15,7 @@ public class Main {
         Random random = new Random(42);
 
         // Zufällige Reihenfolge der Muster generieren
-        for (int i = 0; i < 40; i++) {
+        for (int i = 0; i < 10; i++) {
             trainingData.append(patterns[random.nextInt(patterns.length)]);
         }
 
