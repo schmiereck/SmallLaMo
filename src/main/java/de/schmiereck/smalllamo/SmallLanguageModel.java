@@ -31,10 +31,11 @@ public class SmallLanguageModel {
     private static final Logger logger = LoggerFactory.getLogger(SmallLanguageModel.class);
 
     private final int inputSize = 8;        // 8 Bits für jeden Zeichen-Input
-    private final int preLayerSize1 = 16;   // Größe der ersten versteckten Schicht vor LSTM
-    private final int preLayerSize2 = 24;   // Größe der zweiten versteckten Schicht vor LSTM
-    private final int lstmLayerSize = 32; // Größe der LSTM-Schicht
-    private final int postLayerSize = 24;   // Größe der versteckten Schicht nach LSTM
+    private final int preLayerSize1 = 8 * 3;   // Größe der ersten versteckten Schicht vor LSTM
+    private final int preLayerSize2 = 8 * 6;   // Größe der zweiten versteckten Schicht vor LSTM
+    private final int lstmLayerSize = 8 * 10; // Größe der LSTM-Schicht
+    private final int postLayer1Size = 8 * 6;   // Größe der versteckten Schicht nach LSTM
+    private final int postLayer2Size = 8 * 6;   // Größe der versteckten Schicht nach LSTM
     private final int outputSize = 8;       // 8 Bits für die Vorhersage des nächsten Zeichens
     private final MultiLayerNetwork network;
 
@@ -73,12 +74,17 @@ public class SmallLanguageModel {
                 // Versteckte Feed-Forward Schicht nach LSTM
                 .layer(3, new DenseLayer.Builder()
                         .nIn(lstmLayerSize)
-                        .nOut(postLayerSize)
+                        .nOut(postLayer1Size)
+                        .activation(Activation.RELU)
+                        .build())
+                .layer(4, new DenseLayer.Builder()
+                        .nIn(postLayer1Size)
+                        .nOut(postLayer2Size)
                         .activation(Activation.RELU)
                         .build())
                 // Ausgabeschicht
-                .layer(4, new RnnOutputLayer.Builder()
-                        .nIn(postLayerSize)
+                .layer(5, new RnnOutputLayer.Builder()
+                        .nIn(postLayer2Size)
                         .nOut(outputSize)
                         .activation(Activation.SIGMOID)
                         .lossFunction(LossFunctions.LossFunction.MSE)
@@ -97,7 +103,7 @@ public class SmallLanguageModel {
         network.setListeners(new ScoreIterationListener(20)); // Log-Ausgaben alle 20 Iterationen
 
         logger.info("Erweitertes neuronales Netzwerk initialisiert mit Architektur: {} -> {} -> {} -> {} -> {} -> {}",
-                inputSize, preLayerSize1, preLayerSize2, lstmLayerSize, postLayerSize, outputSize);
+                inputSize, preLayerSize1, preLayerSize2, lstmLayerSize, postLayer1Size, postLayer2Size, outputSize);
     }
 
     /**
@@ -194,7 +200,9 @@ public class SmallLanguageModel {
         INDArray outputArray = network.output(inputArray);
 
         // Umwandeln der Ausgabe in ein Zeichen
-        double[] outputVector = outputArray.getRow(0).toDoubleVector();
+        // Da outputArray 3D ist [1, outputSize, 1], müssen wir den Vektor für den ersten Batch und ersten Zeitschritt extrahieren.
+        INDArray outputVectorSlice = outputArray.get(NDArrayIndex.point(0), NDArrayIndex.all(), NDArrayIndex.point(0));
+        double[] outputVector = outputVectorSlice.toDoubleVector();
         double[] binaryOutput = CharEncoder.argmax(outputVector);
 
         return CharEncoder.decode(binaryOutput);

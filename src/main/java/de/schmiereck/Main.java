@@ -9,13 +9,52 @@ public class Main {
     public static void main(String[] args) {
         System.out.println("Starte SmallLaMo - Small Language Model für Efficient Inference");
 
-        // Trainingsdaten erstellen (einfache Sequenz: "ae aa ea aa")
-        StringBuilder trainingData = new StringBuilder();
-        String[] patterns = {"ae ", "ea ", "aa ", "ee "};
+        // Trainingsdaten erstellen (einfache Sequenz)
+        //String[] patterns = { "0123." };
+        //String[] patterns = { "01.", "12.", "23." };
+        //String[] patterns = { "ae ", "ea ", "aa ", "ee " };
+        //String[] patterns = { "1:ae. ", "2:ea. " };
+        //String[] patterns = { "1: ae ea. ", "2: ea ae. ", "3: iu ui. ", "4: ui iu. " };
         Random random = new Random(42);
 
+        SmallLanguageModel model = new SmallLanguageModel();
+
+        {
+            String[] patterns = { "00.11.22." };
+            int epochs = 50;
+            trainSmallLanguageModel(model, random, patterns, epochs);
+            generateText(model);
+        }
+        {
+            String[] patterns = { "00.", "11.", "22." };
+            int epochs = 50;
+            trainSmallLanguageModel(model, random, patterns, epochs);
+            generateText(model);
+        }
+    }
+
+    private static void generateText(SmallLanguageModel model) {
+        {
+            System.out.println("\nGenerierter Text:");
+            String generatedText = model.generateText('0', 100);
+            System.out.println(generatedText);
+        }
+        {
+            System.out.println("\nGenerierter Text:");
+            String generatedText = model.generateText('1', 100);
+            System.out.println(generatedText);
+        }
+        {
+            System.out.println("\nGenerierter Text:");
+            String generatedText = model.generateText('2', 100);
+             System.out.println(generatedText);
+        }
+    }
+
+    private static SmallLanguageModel trainSmallLanguageModel(SmallLanguageModel model, Random random, String[] patterns, int epochs) {
         // Zufällige Reihenfolge der Muster generieren
-        for (int i = 0; i < 10; i++) {
+        StringBuilder trainingData = new StringBuilder();
+        for (int i = 0; i < 30; i++) {
             trainingData.append(patterns[random.nextInt(patterns.length)]);
         }
 
@@ -23,33 +62,8 @@ public class Main {
         System.out.println("Trainingsdaten: " + trainText);
 
         // Sprachmodell initialisieren und trainieren
-        SmallLanguageModel model = new SmallLanguageModel();
-        int epochs = 100;
         System.out.println("Starte Training für " + epochs + " Epochen...");
         model.train(trainText, epochs);
-
-        // Vorhersagen testen
-        System.out.println("\nVorhersage-Tests:");
-        char[] testChars = {'a', 'e', ' ', 'a', 'a', ' ', 'e', 'e', ' '};
-        for (char testChar : testChars) {
-            char prediction = model.predict(testChar);
-            System.out.println("Zeichen '" + testChar + "' -> Vorhersage: '" + prediction + "'");
-        }
-
-        // Text generieren
-        System.out.println("\nGenerierter Text:");
-        String generatedText = model.generateText('a', 20);
-        System.out.println(generatedText);
-
-        // Erweitertes Training mit mehr Zeichen, wenn gewünscht
-        /*
-        System.out.println("\nErweitertes Training mit 'aeiou':");
-        String extendedText = "aeiou aeiou aeiou";
-        model.train(extendedText, 50);
-
-        System.out.println("\nGenerierter Text nach erweitertem Training:");
-        generatedText = model.generateText('a', 20);
-        System.out.println(generatedText);
-        */
+        return model;
     }
 }
