@@ -33,7 +33,7 @@ public class Main {
         }
         {
             String[] patterns = { "11." };
-            int epochs = 100;
+            int epochs = 2000;
             trainSmallLanguageModel(model, random, patterns, epochs);
             generateText(model);
         }
